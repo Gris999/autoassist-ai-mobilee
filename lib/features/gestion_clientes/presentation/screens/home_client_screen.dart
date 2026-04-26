@@ -1,7 +1,14 @@
 import 'package:flutter/material.dart';
 
+import '../../../autenticacion_seguridad/data/auth_state.dart';
+
 class HomeClientScreen extends StatelessWidget {
-  const HomeClientScreen({super.key});
+  final AuthState authState;
+
+  const HomeClientScreen({
+    super.key,
+    required this.authState,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -10,8 +17,12 @@ class HomeClientScreen extends StatelessWidget {
         title: const Text('Inicio del cliente'),
         actions: [
           IconButton(
-            onPressed: () {
-              Navigator.pushReplacementNamed(context, '/login');
+            tooltip: 'Cerrar sesión',
+            onPressed: () async {
+              await authState.logout();
+              if (context.mounted) {
+                Navigator.pushReplacementNamed(context, '/login');
+              }
             },
             icon: const Icon(Icons.logout),
           ),
@@ -28,25 +39,42 @@ class HomeClientScreen extends StatelessWidget {
               icon: Icons.person_add_alt_1,
               title: 'Mi perfil',
               subtitle: 'Datos del cliente',
-              onTap: () {},
+              onTap: () {
+                final user = authState.user;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      user == null
+                          ? 'Usuario autenticado'
+                          : 'Hola, ${user.displayName}',
+                    ),
+                  ),
+                );
+              },
             ),
             _HomeCard(
               icon: Icons.directions_car,
               title: 'Mis vehículos',
               subtitle: 'Registrar y consultar',
-              onTap: () {},
+              onTap: () {
+                Navigator.pushNamed(context, '/vehicle-register');
+              },
             ),
             _HomeCard(
               icon: Icons.warning_amber_rounded,
               title: 'Reportar incidente',
               subtitle: 'Registrar emergencia',
-              onTap: () {},
+              onTap: () {
+                Navigator.pushNamed(context, '/report-incident');
+              },
             ),
             _HomeCard(
               icon: Icons.track_changes,
               title: 'Estado del servicio',
               subtitle: 'Seguimiento del auxilio',
-              onTap: () {},
+              onTap: () {
+                Navigator.pushNamed(context, '/client-incidents');
+              },
             ),
           ],
         ),
