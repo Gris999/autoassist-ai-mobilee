@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "133192249436",
+    "project_id": "autoassist-ai-e2438",
+    "storage_bucket": "autoassist-ai-e2438.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:133192249436:android:ecb22e3c57a9730b2b3699",
+        "android_client_info": {
+          "package_name": "com.example.mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDgvTY1t3hskZkfQyYnk7Bu6tmBv80LrNM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

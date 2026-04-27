@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import '../../../core/notifications/push_notification_service.dart';
 import '../domain/auth_user.dart';
 import 'auth_repository.dart';
 import 'auth_service.dart';
@@ -38,6 +39,9 @@ class AuthState extends ChangeNotifier {
       status = session == null
           ? AuthStatus.unauthenticated
           : AuthStatus.authenticated;
+      if (session != null) {
+        await _configurePushNotifications(session.accessToken);
+      }
     } catch (_) {
       user = null;
       status = AuthStatus.unauthenticated;
@@ -62,6 +66,8 @@ class AuthState extends ChangeNotifier {
         rememberSession: rememberSession,
       );
 
+      await _configurePushNotifications(session.accessToken);
+
       user = session.user;
       status = AuthStatus.authenticated;
       notifyListeners();
@@ -80,10 +86,23 @@ class AuthState extends ChangeNotifier {
   }
 
   Future<void> logout() async {
+    await PushNotificationService.instance.stopTokenRefreshListener();
     await _repository.logout();
     user = null;
     errorMessage = null;
     status = AuthStatus.unauthenticated;
     notifyListeners();
+  }
+
+  Future<void> _configurePushNotifications(String accessToken) async {
+    try {
+      final pushService = PushNotificationService.instance;
+      await pushService.initialize();
+      await pushService.registerCurrentToken(accessToken);
+      pushService.listenTokenRefresh(accessToken);
+    } catch (error, stackTrace) {
+      debugPrint('FCM auth integration error=$error');
+      debugPrint('FCM auth integration stack=$stackTrace');
+    }
   }
 }

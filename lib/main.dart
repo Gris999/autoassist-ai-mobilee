@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
 
+import 'core/notifications/push_notification_service.dart';
 import 'core/theme/app_theme.dart';
 import 'features/autenticacion_seguridad/data/auth_state.dart';
 import 'features/autenticacion_seguridad/data/role_redirect.dart';
@@ -11,7 +13,12 @@ import 'features/gestion_clientes/presentation/screens/vehicle_register_page.dar
 import 'features/gestion_incidentes_atencion/presentation/screens/client_incidents_page.dart';
 import 'features/gestion_incidentes_atencion/presentation/screens/report_incident_page.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await Firebase.initializeApp();
+  await PushNotificationService.instance.initialize();
+
   runApp(const AutoAssistApp());
 }
 
@@ -43,7 +50,13 @@ class _AutoAssistAppState extends State<AutoAssistApp> {
       title: 'AutoAssist AI',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
+      navigatorKey: PushNotificationService.navigatorKey,
+
+      // TEMPORAL:
+      // Esto abre primero la pantalla donde podrás copiar el token FCM.
+      // Cuando termines de probar, cambia esta línea por: initialRoute: '/splash',
       initialRoute: '/splash',
+
       routes: {
         '/splash': (_) => _SplashScreen(authState: _authState),
         '/login': (_) => LoginPage(authState: _authState),
