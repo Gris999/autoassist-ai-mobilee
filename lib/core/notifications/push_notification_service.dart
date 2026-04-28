@@ -15,6 +15,8 @@ class PushNotificationService {
   static final PushNotificationService instance = PushNotificationService._();
   static final GlobalKey<NavigatorState> navigatorKey =
       GlobalKey<NavigatorState>();
+  static final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey =
+      GlobalKey<ScaffoldMessengerState>();
 
   final FirebaseMessaging _messaging = FirebaseMessaging.instance;
   StreamSubscription<String>? _tokenRefreshSubscription;
@@ -94,6 +96,7 @@ class PushNotificationService {
       debugPrint('FCM onMessage id=${message.messageId}');
       debugPrint('FCM onMessage notification=${message.notification?.title}');
       debugPrint('FCM onMessage data=${message.data}');
+      _showForegroundNotification(message);
     });
 
     FirebaseMessaging.onMessageOpenedApp.listen((message) {
@@ -178,17 +181,44 @@ class PushNotificationService {
   }
 
   void _handleNotificationTap(RemoteMessage message) {
-    final data = message.data;
-    final idNotificacion = data['id_notificacion']?.toString();
-    final idIncidente = data['id_incidente']?.toString();
-    final tipo = data['tipo_notificacion']?.toString();
+    final payload = _PushPayload.fromMessage(message);
 
     debugPrint(
-      'FCM notification tap id_notificacion=$idNotificacion '
-      'id_incidente=$idIncidente tipo_notificacion=$tipo',
+      'FCM notification tap id_notificacion=${payload.idNotificacion} '
+      'id_incidente=${payload.idIncidente} '
+      'tipo_notificacion=${payload.tipoNotificacion}',
     );
 
-    if (idIncidente == null || idIncidente.isEmpty) {
+    _navigateFromPayload(payload);
+  }
+
+  void _showForegroundNotification(RemoteMessage message) {
+    final payload = _PushPayload.fromMessage(message);
+    final messenger = scaffoldMessengerKey.currentState;
+    if (messenger == null) {
+      debugPrint('FCM foreground snackbar skipped: messenger not ready');
+      return;
+    }
+
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(payload.displayText),
+          action: payload.idIncidente == null
+              ? null
+              : SnackBarAction(
+                  label: 'Ver',
+                  onPressed: () => _navigateFromPayload(payload),
+                ),
+        ),
+      );
+  }
+
+  void _navigateFromPayload(_PushPayload payload) {
+    final idIncidente = payload.idIncidente;
+
+    if (idIncidente == null) {
       debugPrint('FCM tap without id_incidente; navigation skipped');
       return;
     }
@@ -199,9 +229,13 @@ class PushNotificationService {
       return;
     }
 
-    // TODO: navegar al detalle directo cuando exista una ruta que cargue
-    // el incidente por id_incidente. Por ahora abrimos el listado del cliente.
-    navigator.pushNamed('/client-incidents');
+    navigator.pushNamed(
+      '/client-incidents',
+      arguments: {
+        'id_incidente': idIncidente,
+        'destination': payload.destination,
+      },
+    );
   }
 
   String _platformName() {
@@ -212,5 +246,61 @@ class PushNotificationService {
       return 'IOS';
     }
     return 'WEB';
+  }
+}
+
+class _PushPayload {
+  final String? idNotificacion;
+  final int? idIncidente;
+  final String tipoNotificacion;
+  final String titulo;
+  final String mensaje;
+
+  const _PushPayload({
+    required this.idNotificacion,
+    required this.idIncidente,
+    required this.tipoNotificacion,
+    required this.titulo,
+    required this.mensaje,
+  });
+
+  factory _PushPayload.fromMessage(RemoteMessage message) {
+    final data = message.data;
+    final title = data['titulo']?.toString() ??
+        data['title']?.toString() ??
+        message.notification?.title ??
+        'Notificación';
+    final body = data['mensaje']?.toString() ??
+        data['message']?.toString() ??
+        data['body']?.toString() ??
+        message.notification?.body ??
+        '';
+
+    return _PushPayload(
+      idNotificacion: data['id_notificacion']?.toString(),
+      idIncidente: int.tryParse(data['id_incidente']?.toString() ?? ''),
+      tipoNotificacion:
+          data['tipo_notificacion']?.toString().toUpperCase() ?? '',
+      titulo: title,
+      mensaje: body,
+    );
+  }
+
+  String get displayText {
+    if (mensaje.trim().isEmpty) return titulo;
+    return '$titulo\n$mensaje';
+  }
+
+  String get destination {
+    return switch (tipoNotificacion) {
+      'TALLER_ACEPTO' ||
+      'ASIGNACION_TECNICO' ||
+      'TECNICO_ASIGNADO' ||
+      'UNIDAD_MOVIL_ASIGNADA' ||
+      'UNIDAD_ASIGNADA' ||
+      'ASIGNACION_COMPLETA' =>
+        'assignment',
+      _ => 'detail',
+    };
   }
 }

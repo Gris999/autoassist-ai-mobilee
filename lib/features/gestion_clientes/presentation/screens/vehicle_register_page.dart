@@ -24,7 +24,6 @@ class _VehicleRegisterPageState extends State<VehicleRegisterPage> {
   final _modeloController = TextEditingController();
   final _anioController = TextEditingController();
   final _colorController = TextEditingController();
-  final _descripcionController = TextEditingController();
   final _repository = VehicleRepository();
 
   List<VehicleType> _types = const [];
@@ -47,7 +46,6 @@ class _VehicleRegisterPageState extends State<VehicleRegisterPage> {
     _modeloController.dispose();
     _anioController.dispose();
     _colorController.dispose();
-    _descripcionController.dispose();
     super.dispose();
   }
 
@@ -119,7 +117,6 @@ class _VehicleRegisterPageState extends State<VehicleRegisterPage> {
         modelo: _modeloController.text,
         anio: int.parse(_anioController.text.trim()),
         color: _colorController.text,
-        descripcionReferencia: _descripcionController.text,
       );
 
       if (!mounted) return;
@@ -130,7 +127,6 @@ class _VehicleRegisterPageState extends State<VehicleRegisterPage> {
       _modeloController.clear();
       _anioController.clear();
       _colorController.clear();
-      _descripcionController.clear();
       setState(() {
         _selectedType = _types.isEmpty ? null : _types.first;
       });
@@ -163,7 +159,7 @@ class _VehicleRegisterPageState extends State<VehicleRegisterPage> {
 
     if (!mounted) return;
 
-    Navigator.pushReplacementNamed(context, '/login');
+    Navigator.pushNamedAndRemoveUntil(context, '/login', (_) => false);
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Tu sesión expiró. Inicia sesión nuevamente.'),
@@ -202,7 +198,6 @@ class _VehicleRegisterPageState extends State<VehicleRegisterPage> {
                         modeloController: _modeloController,
                         anioController: _anioController,
                         colorController: _colorController,
-                        descripcionController: _descripcionController,
                         isSubmitting: _isSubmitting,
                         submitError: _submitError,
                         onSubmit: _submit,
@@ -225,7 +220,6 @@ class _VehicleForm extends StatelessWidget {
   final TextEditingController modeloController;
   final TextEditingController anioController;
   final TextEditingController colorController;
-  final TextEditingController descripcionController;
   final bool isSubmitting;
   final String? submitError;
   final VoidCallback onSubmit;
@@ -241,7 +235,6 @@ class _VehicleForm extends StatelessWidget {
     required this.modeloController,
     required this.anioController,
     required this.colorController,
-    required this.descripcionController,
     required this.isSubmitting,
     required this.submitError,
     required this.onSubmit,
@@ -351,17 +344,6 @@ class _VehicleForm extends StatelessWidget {
                   enabled: !isSubmitting,
                   validator: (value) => _required(value, 'color'),
                 ),
-                const SizedBox(height: 16),
-                _VehicleTextField(
-                  label: 'Descripción / referencia',
-                  controller: descripcionController,
-                  icon: Icons.notes_outlined,
-                  hintText: 'Ej. Sedan de 4 puertas',
-                  enabled: !isSubmitting,
-                  minLines: 3,
-                  maxLines: 4,
-                  validator: (_) => null,
-                ),
                 if (submitError != null) ...[
                   const SizedBox(height: 16),
                   Text(
@@ -428,8 +410,6 @@ class _VehicleTextField extends StatelessWidget {
   final bool enabled;
   final TextInputType? keyboardType;
   final TextCapitalization textCapitalization;
-  final int? minLines;
-  final int? maxLines;
   final String? Function(String?) validator;
 
   const _VehicleTextField({
@@ -441,8 +421,6 @@ class _VehicleTextField extends StatelessWidget {
     required this.validator,
     this.keyboardType,
     this.textCapitalization = TextCapitalization.none,
-    this.minLines,
-    this.maxLines = 1,
   });
 
   @override
@@ -462,8 +440,6 @@ class _VehicleTextField extends StatelessWidget {
           enabled: enabled,
           keyboardType: keyboardType,
           textCapitalization: textCapitalization,
-          minLines: minLines,
-          maxLines: maxLines,
           validator: validator,
           decoration: InputDecoration(
             hintText: hintText,

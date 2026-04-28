@@ -86,12 +86,18 @@ class AuthState extends ChangeNotifier {
   }
 
   Future<void> logout() async {
-    await PushNotificationService.instance.stopTokenRefreshListener();
-    await _repository.logout();
-    user = null;
-    errorMessage = null;
-    status = AuthStatus.unauthenticated;
-    notifyListeners();
+    try {
+      await PushNotificationService.instance.stopTokenRefreshListener();
+    } catch (error, stackTrace) {
+      debugPrint('FCM stop token listener error=$error');
+      debugPrint('FCM stop token listener stack=$stackTrace');
+    } finally {
+      await _repository.logout();
+      user = null;
+      errorMessage = null;
+      status = AuthStatus.unauthenticated;
+      notifyListeners();
+    }
   }
 
   Future<void> _configurePushNotifications(String accessToken) async {

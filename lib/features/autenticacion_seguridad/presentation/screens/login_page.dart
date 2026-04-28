@@ -20,9 +20,6 @@ class _LoginPageState extends State<LoginPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
-  final _roles = const ['Cliente', 'Técnico', 'Taller', 'Admin'];
-
-  String _selectedRole = 'Cliente';
   bool _rememberSession = false;
   bool _obscurePassword = true;
   String? _localError;
@@ -123,36 +120,6 @@ class _LoginPageState extends State<LoginPage> {
                                   ),
                             ),
                             const SizedBox(height: 34),
-                            Text(
-                              'Tipo de acceso',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .labelLarge
-                                  ?.copyWith(
-                                    color: const Color(0xFF52657E),
-                                  ),
-                            ),
-                            const SizedBox(height: 12),
-                            Wrap(
-                              spacing: 10,
-                              runSpacing: 10,
-                              children: _roles.map((role) {
-                                final selected = role == _selectedRole;
-                                return ChoiceChip(
-                                  label: Text(role),
-                                  selected: selected,
-                                  showCheckmark: false,
-                                  onSelected: isLoading
-                                      ? null
-                                      : (_) {
-                                          setState(() {
-                                            _selectedRole = role;
-                                          });
-                                        },
-                                );
-                              }).toList(),
-                            ),
-                            const SizedBox(height: 32),
                             const _FieldLabel('Correo electrónico'),
                             const SizedBox(height: 10),
                             TextFormField(
@@ -200,6 +167,9 @@ class _LoginPageState extends State<LoginPage> {
                               validator: (value) {
                                 if (value == null || value.isEmpty) {
                                   return 'Ingresa tu contraseña';
+                                }
+                                if (value.length < 8) {
+                                  return 'La contraseña debe tener mínimo 8 caracteres';
                                 }
                                 return null;
                               },

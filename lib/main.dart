@@ -11,6 +11,7 @@ import 'features/gestion_clientes/presentation/screens/home_client_screen.dart';
 import 'features/gestion_clientes/presentation/screens/role_dashboard_screen.dart';
 import 'features/gestion_clientes/presentation/screens/vehicle_register_page.dart';
 import 'features/gestion_incidentes_atencion/presentation/screens/client_incidents_page.dart';
+import 'features/gestion_incidentes_atencion/presentation/screens/notifications_page.dart';
 import 'features/gestion_incidentes_atencion/presentation/screens/report_incident_page.dart';
 
 Future<void> main() async {
@@ -51,6 +52,7 @@ class _AutoAssistAppState extends State<AutoAssistApp> {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       navigatorKey: PushNotificationService.navigatorKey,
+      scaffoldMessengerKey: PushNotificationService.scaffoldMessengerKey,
 
       // TEMPORAL:
       // Esto abre primero la pantalla donde podrás copiar el token FCM.
@@ -64,7 +66,16 @@ class _AutoAssistAppState extends State<AutoAssistApp> {
         '/home-client': (_) => HomeClientScreen(authState: _authState),
         '/vehicle-register': (_) => VehicleRegisterPage(authState: _authState),
         '/report-incident': (_) => ReportIncidentPage(authState: _authState),
-        '/client-incidents': (_) => ClientIncidentsPage(authState: _authState),
+        '/notifications': (_) => NotificationsPage(authState: _authState),
+        '/client-incidents': (context) {
+          final args = ModalRoute.of(context)?.settings.arguments;
+          final map = args is Map ? args : const {};
+          return ClientIncidentsPage(
+            authState: _authState,
+            initialIncidentId: map['id_incidente'] as int?,
+            initialDestination: map['destination'] as String?,
+          );
+        },
         '/dashboard-admin': (_) => RoleDashboardScreen(
               title: 'Dashboard admin',
               roleName: 'ADMIN',

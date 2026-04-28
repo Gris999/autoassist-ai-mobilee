@@ -126,7 +126,8 @@ class _RegisterClientScreenState extends State<RegisterClientScreen> {
                           icon: Icons.person_outline,
                           hintText: 'Ej. Pedro',
                           enabled: !_isLoading,
-                          validator: (value) => _required(value, 'nombres'),
+                          validator: (value) =>
+                              _validateMinLength(value, 'nombres', 2),
                           textInputAction: TextInputAction.next,
                         ),
                         const SizedBox(height: 16),
@@ -136,7 +137,8 @@ class _RegisterClientScreenState extends State<RegisterClientScreen> {
                           icon: Icons.badge_outlined,
                           hintText: 'Ej. Lopez',
                           enabled: !_isLoading,
-                          validator: (value) => _required(value, 'apellidos'),
+                          validator: (value) =>
+                              _validateMinLength(value, 'apellidos', 2),
                           textInputAction: TextInputAction.next,
                         ),
                         const SizedBox(height: 16),
@@ -147,7 +149,8 @@ class _RegisterClientScreenState extends State<RegisterClientScreen> {
                           hintText: 'Ej. 77777777',
                           enabled: !_isLoading,
                           keyboardType: TextInputType.phone,
-                          validator: (value) => _required(value, 'celular'),
+                          validator: (value) =>
+                              _validateMinLength(value, 'celular', 7),
                           textInputAction: TextInputAction.next,
                         ),
                         const SizedBox(height: 16),
@@ -275,6 +278,16 @@ class _RegisterClientScreenState extends State<RegisterClientScreen> {
   String? _required(String? value, String fieldName) {
     if (value == null || value.trim().isEmpty) {
       return 'Ingresa tus $fieldName';
+    }
+    return null;
+  }
+
+  String? _validateMinLength(String? value, String fieldName, int minLength) {
+    final text = value?.trim() ?? '';
+    final requiredError = _required(text, fieldName);
+    if (requiredError != null) return requiredError;
+    if (text.length < minLength) {
+      return 'Ingresa al menos $minLength caracteres';
     }
     return null;
   }

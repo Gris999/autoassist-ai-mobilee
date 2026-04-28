@@ -100,7 +100,6 @@ class VehicleService {
     required String modelo,
     required int anio,
     required String color,
-    required String descripcionReferencia,
   }) async {
     final response = await _client.post(
       Uri.parse('${AppConfig.baseUrl}/clientes/vehiculos'),
@@ -112,7 +111,6 @@ class VehicleService {
         'modelo': modelo,
         'anio': anio,
         'color': color,
-        'descripcion_referencia': descripcionReferencia,
       }),
     );
 
@@ -131,8 +129,8 @@ class VehicleService {
     }
 
     if (response.statusCode == 400) {
-      throw const VehicleException(
-        'Verifica los datos ingresados',
+      throw VehicleException(
+        _messageFromBody(response.body) ?? 'Verifica los datos ingresados',
         statusCode: 400,
       );
     }
@@ -151,6 +149,26 @@ class VehicleService {
       'Content-Type': 'application/json',
       'Authorization': 'Bearer $accessToken',
     };
+  }
+
+  String? _messageFromBody(String body) {
+    try {
+      final decoded = jsonDecode(body);
+      if (decoded is Map<String, dynamic>) {
+        final message =
+            decoded['detail'] ?? decoded['mensaje'] ?? decoded['message'];
+        if (message is String && message.trim().isNotEmpty) {
+          return message;
+        }
+        if (message is List && message.isNotEmpty) {
+          return message.map((item) => item.toString()).join('\n');
+        }
+      }
+    } catch (_) {
+      return null;
+    }
+
+    return null;
   }
 }
 

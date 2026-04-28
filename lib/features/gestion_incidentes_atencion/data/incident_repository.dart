@@ -24,6 +24,7 @@ class IncidentRepository {
     required String direccionReferencia,
     required double latitud,
     required double longitud,
+    List<IncidentEvidenceInput> evidencias = const [],
   }) {
     return _service.createIncident(
       accessToken: accessToken,
@@ -34,6 +35,27 @@ class IncidentRepository {
       direccionReferencia: direccionReferencia.trim(),
       latitud: latitud,
       longitud: longitud,
+      evidencias: evidencias,
+    );
+  }
+
+  Future<UploadedIncidentEvidence> uploadEvidence({
+    required String accessToken,
+    required String filePath,
+  }) {
+    return _service.uploadEvidence(
+      accessToken: accessToken,
+      filePath: filePath,
+    );
+  }
+
+  Future<TranscribedAudioEvidence> transcribeAudioEvidence({
+    required String accessToken,
+    required String archivoUrl,
+  }) {
+    return _service.transcribeAudioEvidence(
+      accessToken: accessToken,
+      archivoUrl: archivoUrl,
     );
   }
 }

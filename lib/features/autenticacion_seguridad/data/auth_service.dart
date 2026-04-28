@@ -30,7 +30,7 @@ class AuthService {
     );
 
     if (response.statusCode != 200 && response.statusCode != 201) {
-      throw AuthException(_friendlyRegisterError(response.body));
+      throw AuthException(_registerErrorMessage(response));
     }
 
     return RegisterClientResponse.fromJson(
@@ -51,8 +51,12 @@ class AuthService {
       }),
     );
 
-    if (response.statusCode != 200) {
+    if (response.statusCode == 401) {
       throw const AuthException('Correo o contraseña incorrectos');
+    }
+
+    if (response.statusCode != 200) {
+      throw const AuthException('No se pudo iniciar sesión');
     }
 
     final body = jsonDecode(response.body) as Map<String, dynamic>;
@@ -74,6 +78,13 @@ class AuthService {
       },
     );
 
+    if (response.statusCode == 401) {
+      throw const AuthException(
+        'Tu sesión expiró. Inicia sesión nuevamente.',
+        statusCode: 401,
+      );
+    }
+
     if (response.statusCode != 200) {
       throw const AuthException(
         'No se pudo recuperar el usuario autenticado',
@@ -81,6 +92,26 @@ class AuthService {
     }
 
     return AuthUser.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+  }
+
+  Future<void> logout(String accessToken) async {
+    if (accessToken.trim().isEmpty) return;
+
+    await _client.post(
+      Uri.parse('${AppConfig.baseUrl}/auth/logout'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $accessToken',
+      },
+    );
+  }
+
+  String _registerErrorMessage(http.Response response) {
+    if (response.statusCode == 400) {
+      return _messageFromBody(response.body) ?? 'Verifica los datos ingresados';
+    }
+
+    return _friendlyRegisterError(response.body);
   }
 
   String _friendlyRegisterError(String responseBody) {
@@ -99,12 +130,33 @@ class AuthService {
 
     return 'No fue posible completar el registro';
   }
+
+  String? _messageFromBody(String body) {
+    try {
+      final decoded = jsonDecode(body);
+      if (decoded is Map<String, dynamic>) {
+        final message =
+            decoded['detail'] ?? decoded['mensaje'] ?? decoded['message'];
+        if (message is String && message.trim().isNotEmpty) {
+          return message;
+        }
+        if (message is List && message.isNotEmpty) {
+          return message.map((item) => item.toString()).join('\n');
+        }
+      }
+    } catch (_) {
+      return null;
+    }
+
+    return null;
+  }
 }
 
 class AuthException implements Exception {
   final String message;
+  final int? statusCode;
 
-  const AuthException(this.message);
+  const AuthException(this.message, {this.statusCode});
 
   @override
   String toString() => message;

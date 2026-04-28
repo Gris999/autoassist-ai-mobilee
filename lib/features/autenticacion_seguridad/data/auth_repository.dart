@@ -102,8 +102,18 @@ class AuthRepository {
   }
 
   Future<void> logout() async {
-    _sessionToken = null;
-    _sessionUser = null;
-    await TokenStorage.clearSession();
+    final token = _sessionToken ?? await TokenStorage.getToken();
+
+    try {
+      if (token != null && token.isNotEmpty) {
+        await _service.logout(token);
+      }
+    } catch (_) {
+      // Logout must always remove the local session, even if the server fails.
+    } finally {
+      _sessionToken = null;
+      _sessionUser = null;
+      await TokenStorage.clearSession();
+    }
   }
 }

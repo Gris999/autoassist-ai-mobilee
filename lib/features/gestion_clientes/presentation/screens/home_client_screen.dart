@@ -21,7 +21,11 @@ class HomeClientScreen extends StatelessWidget {
             onPressed: () async {
               await authState.logout();
               if (context.mounted) {
-                Navigator.pushReplacementNamed(context, '/login');
+                Navigator.pushNamedAndRemoveUntil(
+                  context,
+                  '/login',
+                  (_) => false,
+                );
               }
             },
             icon: const Icon(Icons.logout),
@@ -74,6 +78,14 @@ class HomeClientScreen extends StatelessWidget {
               subtitle: 'Seguimiento del auxilio',
               onTap: () {
                 Navigator.pushNamed(context, '/client-incidents');
+              },
+            ),
+            _HomeCard(
+              icon: Icons.notifications_active_outlined,
+              title: 'Notificaciones',
+              subtitle: 'Historial y avisos',
+              onTap: () {
+                Navigator.pushNamed(context, '/notifications');
               },
             ),
           ],

@@ -4,14 +4,19 @@ import '../../../autenticacion_seguridad/data/auth_state.dart';
 import '../../data/incident_models.dart';
 import '../../data/incident_repository.dart';
 import '../../data/incident_service.dart';
+import 'incident_assignment_page.dart';
 import 'payment_page.dart';
 
 class ClientIncidentsPage extends StatefulWidget {
   final AuthState authState;
+  final int? initialIncidentId;
+  final String? initialDestination;
 
   const ClientIncidentsPage({
     super.key,
     required this.authState,
+    this.initialIncidentId,
+    this.initialDestination,
   });
 
   @override
@@ -23,6 +28,7 @@ class _ClientIncidentsPageState extends State<ClientIncidentsPage> {
 
   List<ClientIncident> _incidents = const [];
   bool _isLoading = true;
+  bool _handledInitialNavigation = false;
   String? _errorMessage;
 
   @override
@@ -46,6 +52,7 @@ class _ClientIncidentsPageState extends State<ClientIncidentsPage> {
     try {
       final incidents = await _repository.fetchMyIncidents(token);
       setState(() => _incidents = incidents);
+      _openInitialIncidentIfNeeded(incidents);
     } on IncidentException catch (error) {
       if (error.statusCode == 401) {
         await _expireSession();
@@ -64,12 +71,57 @@ class _ClientIncidentsPageState extends State<ClientIncidentsPage> {
   Future<void> _expireSession() async {
     await widget.authState.logout();
     if (!mounted) return;
-    Navigator.pushReplacementNamed(context, '/login');
+    Navigator.pushNamedAndRemoveUntil(context, '/login', (_) => false);
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Tu sesión expiró. Inicia sesión nuevamente.'),
       ),
     );
+  }
+
+  void _openInitialIncidentIfNeeded(List<ClientIncident> incidents) {
+    if (_handledInitialNavigation) return;
+
+    final idIncidente = widget.initialIncidentId;
+    if (idIncidente == null) return;
+
+    ClientIncident? incident;
+    for (final item in incidents) {
+      if (item.idIncidente == idIncidente) {
+        incident = item;
+        break;
+      }
+    }
+    if (incident == null) return;
+    final selectedIncident = incident;
+
+    _handledInitialNavigation = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+
+      if (widget.initialDestination == 'assignment') {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => IncidentAssignmentPage(
+              idIncidente: selectedIncident.idIncidente,
+              authState: widget.authState,
+            ),
+          ),
+        );
+        return;
+      }
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ClientIncidentDetailPage(
+            incident: selectedIncident,
+            authState: widget.authState,
+          ),
+        ),
+      );
+    });
   }
 
   @override
@@ -175,7 +227,7 @@ class _IncidentCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 10),
-                _StatusChip(label: incident.stateLabel),
+                _StatusChip(incident: incident),
               ],
             ),
             const SizedBox(height: 8),
@@ -186,6 +238,8 @@ class _IncidentCard extends StatelessWidget {
                     height: 1.35,
                   ),
             ),
+            const SizedBox(height: 12),
+            _StateNotice(incident: incident),
             const SizedBox(height: 14),
             _MetaRow(
               icon: Icons.schedule_outlined,
@@ -280,6 +334,22 @@ class ClientIncidentDetailPage extends StatelessWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
+                        builder: (_) => IncidentAssignmentPage(
+                          idIncidente: incident.idIncidente,
+                          authState: authState,
+                        ),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.assignment_ind_outlined),
+                  label: const Text('Ver asignación'),
+                ),
+                const SizedBox(height: 12),
+                FilledButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
                         builder: (_) => PaymentPage(
                           idIncidente: incident.idIncidente,
                           authState: authState,
@@ -332,11 +402,13 @@ class _DetailPanel extends StatelessWidget {
                         ),
                   ),
                 ),
-                _StatusChip(label: incident.stateLabel),
+                _StatusChip(incident: incident),
               ],
             ),
             const SizedBox(height: 14),
             Text(incident.descripcionTexto),
+            const SizedBox(height: 16),
+            _StateNotice(incident: incident),
             const SizedBox(height: 16),
             _MetaRow(icon: Icons.place_outlined, text: incident.direccionReferencia),
             const SizedBox(height: 8),
@@ -361,7 +433,7 @@ class _ProgressPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final steps = const [
       (1, 'Reporte enviado'),
-      (2, 'Pendiente de asignación'),
+      (2, 'Buscando taller compatible'),
       (3, 'Auxilio asignado'),
       (4, 'En camino'),
       (5, 'En atención'),
@@ -385,7 +457,8 @@ class _ProgressPanel extends StatelessWidget {
             ),
             const SizedBox(height: 14),
             ...steps.map((step) {
-              final completed = step.$1 <= incident.idEstadoServicioActual;
+              final completed =
+                  !incident.isCancelled && step.$1 <= incident.progressStep;
               return Padding(
                 padding: const EdgeInsets.only(bottom: 12),
                 child: Row(
@@ -403,6 +476,25 @@ class _ProgressPanel extends StatelessWidget {
                 ),
               );
             }),
+            if (incident.isCancelled) ...[
+              Row(
+                children: [
+                  const Icon(
+                    Icons.cancel,
+                    color: Color(0xFFDC2626),
+                    size: 20,
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Servicio cancelado',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: const Color(0xFF991B1B),
+                          fontWeight: FontWeight.w700,
+                        ),
+                  ),
+                ],
+              ),
+            ],
           ],
         ),
       ),
@@ -484,26 +576,86 @@ class _StatusHeader extends StatelessWidget {
 }
 
 class _StatusChip extends StatelessWidget {
-  final String label;
+  final ClientIncident incident;
 
-  const _StatusChip({required this.label});
+  const _StatusChip({required this.incident});
 
   @override
   Widget build(BuildContext context) {
+    final colors = _stateColors(incident.normalizedState);
+
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: const Color(0xFFD6F8E1),
+        color: colors.$1,
         borderRadius: BorderRadius.circular(999),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
         child: Text(
-          label,
-          style: const TextStyle(
-            color: Color(0xFF16A34A),
+          incident.stateLabel,
+          style: TextStyle(
+            color: colors.$2,
             fontWeight: FontWeight.w800,
             fontSize: 12,
           ),
+        ),
+      ),
+    );
+  }
+
+  (Color, Color) _stateColors(String state) {
+    return switch (state) {
+      'REPORTADO' => (const Color(0xFFE0F2FE), const Color(0xFF0369A1)),
+      'BUSCANDO_TALLER' => (
+          const Color(0xFFFEF3C7),
+          const Color(0xFF92400E),
+        ),
+      'ASIGNADO' => (const Color(0xFFDBEAFE), const Color(0xFF1D4ED8)),
+      'EN_CAMINO' => (const Color(0xFFEDE9FE), const Color(0xFF6D28D9)),
+      'EN_ATENCION' => (const Color(0xFFFFEDD5), const Color(0xFFC2410C)),
+      'FINALIZADO' => (const Color(0xFFD6F8E1), const Color(0xFF16A34A)),
+      'CANCELADO' => (const Color(0xFFFEE2E2), const Color(0xFFDC2626)),
+      _ => (const Color(0xFFE2E8F0), const Color(0xFF475569)),
+    };
+  }
+}
+
+class _StateNotice extends StatelessWidget {
+  final ClientIncident incident;
+
+  const _StateNotice({required this.incident});
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.72),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Icon(
+              Icons.info_outline,
+              size: 18,
+              color: Color(0xFF52657E),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                incident.requiereMasInfo
+                    ? 'Necesitamos más información para procesar el incidente.'
+                    : incident.stateDescription,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: const Color(0xFF52657E),
+                      height: 1.35,
+                    ),
+              ),
+            ),
+          ],
         ),
       ),
     );

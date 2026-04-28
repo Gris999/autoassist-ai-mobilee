@@ -23,7 +23,6 @@ class VehicleRepository {
     required String modelo,
     required int anio,
     required String color,
-    required String descripcionReferencia,
   }) {
     return _service.registerVehicle(
       accessToken: accessToken,
@@ -33,7 +32,6 @@ class VehicleRepository {
       modelo: modelo.trim(),
       anio: anio,
       color: color.trim(),
-      descripcionReferencia: descripcionReferencia.trim(),
     );
   }
 }

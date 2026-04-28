@@ -28,7 +28,11 @@ class RoleDashboardScreen extends StatelessWidget {
             onPressed: () async {
               await authState.logout();
               if (context.mounted) {
-                Navigator.pushReplacementNamed(context, '/login');
+                Navigator.pushNamedAndRemoveUntil(
+                  context,
+                  '/login',
+                  (_) => false,
+                );
               }
             },
             icon: const Icon(Icons.logout),
